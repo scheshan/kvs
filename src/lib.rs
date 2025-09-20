@@ -46,13 +46,17 @@ impl KvStore {
 
             let frame_reader = reader.try_iter()?;
             for r in frame_reader {
-                let frame = r?;
-                match frame {
-                    (Frame::Set(key, _), pos) => {
-                        hm.insert(key, LogPosition::new(reader.id(), pos));
-                    }
-                    (Frame::Remove(key), _) => {hm.remove(&key);}
-                    _ => {}
+                let (frame, pos) = r?;
+                let Frame {
+                    typ,
+                    key,
+                    ..
+                } = frame;
+
+                if typ == 0 {
+                    hm.insert(key, LogPosition::new(reader.id(), pos));
+                } else if typ == 2 {
+                    hm.remove(&key);
                 }
             }
 
@@ -74,7 +78,7 @@ impl KvStore {
     }
 
     pub fn set(&mut self, key: String, value: String) -> Result<()> {
-        let frame = Frame::Set(key.clone(), value);
+        let frame = Frame::set(key.clone(), value);
         let pos = self.writer.write(frame)?;
         self.hm.insert(key, LogPosition::new(self.writer.id(), pos));
 
@@ -90,9 +94,14 @@ impl KvStore {
                     None => None,
                     Some(reader) => {
                         let frame = reader.read(pos.pos)?;
-                        match frame {
-                            Frame::Set(key, value) => Some(value),
-                            _ => None,
+                        if frame.typ == 0 {
+                            let Frame {
+                                value,
+                                ..
+                            } = frame;
+                            Some(value)
+                        } else {
+                            None
                         }
                     }
                 }
@@ -102,7 +111,7 @@ impl KvStore {
     }
 
     pub fn remove(&mut self, key: String) -> Result<()> {
-        let frame = Frame::Remove(key.clone());
+        let frame = Frame::remove(key.clone());
         self.writer.write(frame)?;
         self.hm.remove(&key);
         Ok(())

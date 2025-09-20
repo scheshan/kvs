@@ -1,8 +1,11 @@
-use crate::frame::{Frame, FrameReader};
 use crate::Result;
+use crate::frame::{Frame, FrameReader};
+use std::fs;
 use std::fs::{File, OpenOptions};
-use std::io::{BufWriter, Write};
+use std::io::{BufWriter, Seek, SeekFrom, Write};
 use std::path::{Path, PathBuf};
+
+const LOG_FILE_EXTENSION: &str = ".bin";
 
 pub(crate) struct LogReader {
     id: u64,
@@ -11,11 +14,14 @@ pub(crate) struct LogReader {
 
 impl LogReader {
     pub fn from(path: &Path, id: u64) -> Result<Self> {
-        unimplemented!()
+        let file = OpenOptions::new().read(true).open(path)?;
+
+        Ok(Self { id, file })
     }
 
     pub fn read(&mut self, pos: usize) -> Result<Frame> {
-        unimplemented!()
+        self.file.seek(SeekFrom::Start(pos as u64))?;
+        Frame::read(&self.file)
     }
 
     pub fn id(&self) -> u64 {
@@ -28,7 +34,23 @@ impl LogReader {
     }
 
     pub fn load_exist(dir: &Path) -> Result<Vec<LogReader>> {
-        unimplemented!()
+        let mut vec = Vec::<LogReader>::new();
+
+        let rd = fs::read_dir(dir)?;
+        for r in rd {
+            let entry = r?;
+            let path = entry.path();
+            if path.extension().is_none() || path.extension().unwrap() != LOG_FILE_EXTENSION {
+                continue;
+            }
+            let file_name = path.file_stem().unwrap().to_str().unwrap();
+            let id = file_name.parse::<u64>()?;
+
+            let reader = LogReader::from(&path, id)?;
+            vec.push(reader);
+        }
+
+        Ok(vec)
     }
 
     pub fn try_iter(&self) -> Result<FrameReader> {
@@ -63,9 +85,10 @@ impl LogWriter {
     }
 
     pub fn write(&mut self, frame: Frame) -> Result<usize> {
-        let size = frame.write(&self.w)?;
+        let pos = self.pos;
+        let size = frame.write(&mut self.w)?;
         self.pos += size;
-        Ok(self.pos)
+        Ok(pos)
     }
 
     pub fn id(&self) -> u64 {
