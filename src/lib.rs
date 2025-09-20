@@ -1,7 +1,7 @@
-mod frame;
+mod record;
 mod log;
 
-use crate::frame::Frame;
+use crate::record::Record;
 use crate::log::{LogReader, LogWriter};
 use std::collections::HashMap;
 use std::fs;
@@ -45,14 +45,14 @@ impl KvStore {
                 id = reader.id();
             }
 
-            let frame_reader = reader.try_iter()?;
-            for r in frame_reader {
-                let (frame, pos) = r?;
-                let Frame {
+            let record_iter = reader.try_iter()?;
+            for r in record_iter {
+                let (record, pos) = r?;
+                let Record {
                     typ,
                     key,
                     ..
-                } = frame;
+                } = record;
 
                 if typ == 0 {
                     hm.insert(key, LogPosition::new(reader.id(), pos));
@@ -79,8 +79,8 @@ impl KvStore {
     }
 
     pub fn set(&mut self, key: String, value: String) -> Result<()> {
-        let frame = Frame::set(key.clone(), value);
-        let pos = self.writer.write(frame)?;
+        let record = Record::set(key.clone(), value);
+        let pos = self.writer.write(record)?;
         self.hm.insert(key, LogPosition::new(self.writer.id(), pos));
 
         Ok(())
@@ -94,12 +94,12 @@ impl KvStore {
                 match o {
                     None => None,
                     Some(reader) => {
-                        let frame = reader.read(pos.pos)?;
-                        if frame.typ == 0 {
-                            let Frame {
+                        let record = reader.read(pos.pos)?;
+                        if record.typ == 0 {
+                            let Record {
                                 value,
                                 ..
-                            } = frame;
+                            } = record;
                             Some(value)
                         } else {
                             None
@@ -116,8 +116,8 @@ impl KvStore {
             return Err(anyhow!("Key not found"))
         }
 
-        let frame = Frame::remove(key.clone());
-        self.writer.write(frame)?;
+        let record = Record::remove(key.clone());
+        self.writer.write(record)?;
         self.hm.remove(&key);
         Ok(())
     }

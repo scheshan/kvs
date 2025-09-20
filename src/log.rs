@@ -1,4 +1,4 @@
-use crate::frame::{Frame, FrameReader};
+use crate::record::{Record, RecordIter};
 use crate::Result;
 use std::fs;
 use std::fs::{File, OpenOptions};
@@ -19,10 +19,10 @@ impl LogReader {
         Ok(Self { id, file })
     }
 
-    pub fn read(&mut self, pos: usize) -> Result<Frame> {
+    pub fn read(&mut self, pos: usize) -> Result<Record> {
         self.file.seek(SeekFrom::Start(pos as u64))?;
-        let (frame, _) = Frame::read(&mut self.file)?;
-        Ok(frame)
+        let (record, _) = Record::read(&mut self.file)?;
+        Ok(record)
     }
 
     pub fn id(&self) -> u64 {
@@ -56,9 +56,9 @@ impl LogReader {
         Ok(vec)
     }
 
-    pub fn try_iter(&self) -> Result<FrameReader> {
+    pub fn try_iter(&self) -> Result<RecordIter> {
         let file = self.file.try_clone()?;
-        Ok(FrameReader::new(file))
+        Ok(RecordIter::new(file))
     }
 }
 
@@ -87,9 +87,9 @@ impl LogWriter {
         })
     }
 
-    pub fn write(&mut self, frame: Frame) -> Result<usize> {
+    pub fn write(&mut self, record: Record) -> Result<usize> {
         let pos = self.pos;
-        let size = frame.write(&mut self.w)?;
+        let size = record.write(&mut self.w)?;
         self.pos += size;
         Ok(pos)
     }

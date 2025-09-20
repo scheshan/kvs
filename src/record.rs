@@ -2,7 +2,7 @@ use crate::Result;
 use std::fs::File;
 use std::io::{Read, Write};
 
-pub struct Frame {
+pub struct Record {
     pub(crate) typ: u8,
     pub(crate) key: String,
     pub(crate) value: String,
@@ -10,7 +10,7 @@ pub struct Frame {
 
 const EMPTY_STRING: &str = "";
 
-impl Frame {
+impl Record {
     pub fn set(key: String, value: String) -> Self {
         Self { typ: 0, key, value }
     }
@@ -75,17 +75,17 @@ impl Frame {
     }
 }
 
-pub(crate) struct FrameReader {
+pub(crate) struct RecordIter {
     pos: usize,
     file: File,
 }
 
-impl FrameReader {
+impl RecordIter {
     pub fn new(file: File) -> Self {
         Self { file, pos: 0 }
     }
 
-    fn read_frame(&mut self) -> Result<Frame> {
+    fn read_frame(&mut self) -> Result<Record> {
         unimplemented!()
     }
 
@@ -94,13 +94,13 @@ impl FrameReader {
     }
 }
 
-impl Iterator for FrameReader {
-    type Item = Result<(Frame, usize)>;
+impl Iterator for RecordIter {
+    type Item = Result<(Record, usize)>;
 
     fn next(&mut self) -> Option<Self::Item> {
         let pos = self.pos;
 
-        let rst = Frame::read(&mut self.file);
+        let rst = Record::read(&mut self.file);
         match rst {
             Ok((frame, len)) => {
                 self.pos += len;
