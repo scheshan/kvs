@@ -1,6 +1,5 @@
 mod frame;
 mod log;
-mod wal;
 
 use crate::frame::Frame;
 use crate::log::{LogReader, LogWriter};
