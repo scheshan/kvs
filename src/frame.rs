@@ -103,7 +103,7 @@ impl Iterator for FrameReader {
         let rst = Frame::read(&mut self.file);
         match rst {
             Ok((frame, len)) => {
-                self.pos += pos;
+                self.pos += len;
                 Some(Ok((frame, pos)))
             }
             Err(e) => None,

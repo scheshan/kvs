@@ -1,11 +1,11 @@
-use crate::Result;
 use crate::frame::{Frame, FrameReader};
+use crate::Result;
 use std::fs;
 use std::fs::{File, OpenOptions};
 use std::io::{BufWriter, Seek, SeekFrom, Write};
 use std::path::{Path, PathBuf};
 
-const LOG_FILE_EXTENSION: &str = ".bin";
+const LOG_FILE_EXTENSION: &str = "bin";
 
 pub(crate) struct LogReader {
     id: u64,
@@ -50,6 +50,8 @@ impl LogReader {
             let reader = LogReader::from(&path, id)?;
             vec.push(reader);
         }
+
+        vec.sort_by(|l, r| l.id.cmp(&r.id));
 
         Ok(vec)
     }
