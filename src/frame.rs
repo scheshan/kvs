@@ -49,7 +49,7 @@ impl Frame {
         Ok(res)
     }
 
-    pub fn read(reader: &mut impl Read) -> Result<Self> {
+    pub fn read(reader: &mut impl Read) -> Result<(Self, usize)> {
         let mut header = [0u8; 1 + 2 * size_of::<usize>()];
         let x = reader.read_exact(&mut header)?;
 
@@ -66,15 +66,16 @@ impl Frame {
 
         let key = String::from_utf8(key_data.to_vec())?;
         let value = String::from_utf8(value_data.to_vec())?;
+        
+        let total_len = header.len() + key_length + value_length;
 
-        Ok(Self { typ, key, value })
+        Ok((Self { typ, key, value }, total_len))
     }
 }
 
 pub(crate) struct FrameReader {
     pos: usize,
     file: File,
-    header_buf: [u8; 9],
 }
 
 impl FrameReader {
@@ -82,7 +83,6 @@ impl FrameReader {
         Self {
             file,
             pos: 0,
-            header_buf: [0u8; 9],
         }
     }
 
@@ -99,6 +99,17 @@ impl Iterator for FrameReader {
     type Item = Result<(Frame, usize)>;
 
     fn next(&mut self) -> Option<Self::Item> {
-        unimplemented!()
+        let pos = self.pos;
+
+        let rst = Frame::read(&mut self.file);
+        match rst {
+            Ok((frame, len)) => {
+                self.pos += pos;
+                Some(Ok((frame, pos)))
+            }
+            Err(e) => {
+                None
+            }
+        }
     }
 }

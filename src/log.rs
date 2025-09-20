@@ -21,7 +21,8 @@ impl LogReader {
 
     pub fn read(&mut self, pos: usize) -> Result<Frame> {
         self.file.seek(SeekFrom::Start(pos as u64))?;
-        Frame::read(&mut self.file)
+        let (frame, _) = Frame::read(&mut self.file)?;
+        Ok(frame)
     }
 
     pub fn id(&self) -> u64 {
