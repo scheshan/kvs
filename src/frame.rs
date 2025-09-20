@@ -1,7 +1,6 @@
 use crate::Result;
-use bytes::BytesMut;
 use std::fs::File;
-use std::io::{BufReader, Read, Write};
+use std::io::{Read, Write};
 
 pub struct Frame {
     pub(crate) typ: u8,
