@@ -6,6 +6,7 @@ use crate::log::{LogReader, LogWriter};
 use std::collections::HashMap;
 use std::fs;
 use std::path::{Path, PathBuf};
+use anyhow::anyhow;
 
 pub type Result<T> = anyhow::Result<T>;
 
@@ -111,6 +112,10 @@ impl KvStore {
     }
 
     pub fn remove(&mut self, key: String) -> Result<()> {
+        if !self.hm.contains_key(&key) {
+            return Err(anyhow!("Key not found"))
+        }
+
         let frame = Frame::remove(key.clone());
         self.writer.write(frame)?;
         self.hm.remove(&key);
