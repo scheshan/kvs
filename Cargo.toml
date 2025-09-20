@@ -14,3 +14,11 @@ assert_cmd = "0.11.0"
 predicates = "1.0.0"
 tempfile = "3.0.7"
 walkdir = "2.2.7"
+
+[[bin]]
+name = "kvs-server"
+path = "src/bin/kvs_server.rs"
+
+[[bin]]
+name = "kvs-client"
+path = "src/bin/kvs_client.rs"
