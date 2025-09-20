@@ -46,6 +46,8 @@ impl Frame {
         res += writer.write(self.key.as_bytes())?;
         res += writer.write(self.value.as_bytes())?;
 
+        writer.flush()?;
+
         Ok(res)
     }
 
@@ -59,14 +61,14 @@ impl Frame {
         let value_arr = &header[(1 + size_of::<usize>())..];
         let value_length = usize::from_be_bytes(value_arr.try_into().unwrap());
 
-        let mut vec = Vec::<u8>::with_capacity(value_length);
-        reader.read_exact(vec.as_mut_slice())?;
+        let mut vec = vec![0u8; key_length + value_length];
+        reader.read_exact(&mut vec)?;
 
         let (key_data, value_data) = vec.split_at(key_length);
 
         let key = String::from_utf8(key_data.to_vec())?;
         let value = String::from_utf8(value_data.to_vec())?;
-        
+
         let total_len = header.len() + key_length + value_length;
 
         Ok((Self { typ, key, value }, total_len))
@@ -80,10 +82,7 @@ pub(crate) struct FrameReader {
 
 impl FrameReader {
     pub fn new(file: File) -> Self {
-        Self {
-            file,
-            pos: 0,
-        }
+        Self { file, pos: 0 }
     }
 
     fn read_frame(&mut self) -> Result<Frame> {
@@ -107,9 +106,7 @@ impl Iterator for FrameReader {
                 self.pos += pos;
                 Some(Ok((frame, pos)))
             }
-            Err(e) => {
-                None
-            }
+            Err(e) => None,
         }
     }
 }
