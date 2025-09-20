@@ -1,6 +1,7 @@
 use crate::Result;
+use bytes::BytesMut;
 use std::fs::File;
-use std::io::{Read, Write};
+use std::io::{BufReader, Read, Write};
 
 pub struct Frame {
     pub(crate) typ: u8,
@@ -12,11 +13,7 @@ const EMPTY_STRING: &str = "";
 
 impl Frame {
     pub fn set(key: String, value: String) -> Self {
-        Self {
-            typ: 0,
-            key,
-            value,
-        }
+        Self { typ: 0, key, value }
     }
 
     pub fn get(key: String) -> Self {
@@ -53,8 +50,25 @@ impl Frame {
         Ok(res)
     }
 
-    pub fn read(reader: &impl Read) -> Result<Self> {
-        unimplemented!()
+    pub fn read(reader: &mut impl Read) -> Result<Self> {
+        let mut header = [0u8; 1 + 2 * size_of::<usize>()];
+        let x = reader.read_exact(&mut header)?;
+
+        let typ = header[0];
+        let key_arr = &header[1..(1 + size_of::<usize>())];
+        let key_length = usize::from_be_bytes(key_arr.try_into().unwrap());
+        let value_arr = &header[(1 + size_of::<usize>())..];
+        let value_length = usize::from_be_bytes(value_arr.try_into().unwrap());
+
+        let mut vec = Vec::<u8>::with_capacity(value_length);
+        reader.read_exact(vec.as_mut_slice())?;
+
+        let (key_data, value_data) = vec.split_at(key_length);
+
+        let key = String::from_utf8(key_data.to_vec())?;
+        let value = String::from_utf8(value_data.to_vec())?;
+
+        Ok(Self { typ, key, value })
     }
 }
 
