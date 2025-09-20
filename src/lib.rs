@@ -44,7 +44,7 @@ impl KvStore {
                 id = reader.id();
             }
 
-            let frame_reader = reader.try_clone()?;
+            let frame_reader = reader.try_iter()?;
             for r in frame_reader {
                 let frame = r?;
                 match frame {

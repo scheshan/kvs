@@ -1,8 +1,7 @@
+use crate::frame::{Frame, FrameReader};
 use crate::Result;
-use crate::frame::Frame;
-use std::fmt::format;
 use std::fs::{File, OpenOptions};
-use std::io::{BufWriter, Seek};
+use std::io::{BufWriter, Write};
 use std::path::{Path, PathBuf};
 
 pub(crate) struct LogReader {
@@ -31,13 +30,10 @@ impl LogReader {
     pub fn load_exist(dir: &Path) -> Result<Vec<LogReader>> {
         unimplemented!()
     }
-}
 
-impl Iterator for LogReader {
-    type Item = Result<(Frame, usize)>;
-
-    fn next(&mut self) -> Option<Self::Item> {
-        unimplemented!()
+    pub fn try_iter(&self) -> Result<FrameReader> {
+        let file = self.file.try_clone()?;
+        Ok(FrameReader::new(file))
     }
 }
 
@@ -67,7 +63,9 @@ impl LogWriter {
     }
 
     pub fn write(&mut self, frame: Frame) -> Result<usize> {
-        unimplemented!()
+        let size = frame.write(&self.w)?;
+        self.pos += size;
+        Ok(self.pos)
     }
 
     pub fn id(&self) -> u64 {
