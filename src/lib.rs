@@ -1,4 +1,9 @@
+mod log;
+mod cmd;
+
 use std::collections::HashMap;
+
+pub type Result<T> = anyhow::Result<T>;
 
 pub struct KvStore {
     data: HashMap<String, String>,
