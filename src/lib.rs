@@ -14,6 +14,8 @@ pub struct KvStore {
     data: HashMap<String, Position>,
     readers: HashMap<u64, Reader>,
     writer: Writer,
+    un_compacted: usize,
+    dir: PathBuf,
 }
 
 impl KvStore {
@@ -42,9 +44,11 @@ impl KvStore {
         readers.insert(reader.id(), reader);
 
         Ok(Self {
+            dir: path,
             data,
             readers,
             writer,
+            un_compacted: 0,
         })
     }
 
@@ -52,7 +56,10 @@ impl KvStore {
         let cmd = Command::Set(key.clone(), value.clone());
         let pos = self.writer.write(cmd)?;
 
-        self.data.insert(key, pos);
+        if let Some(_) = self.data.insert(key, pos) {
+            self.un_compacted += 1;
+            self.compact()?;
+        }
 
         Ok(())
     }
@@ -90,7 +97,53 @@ impl KvStore {
         let cmd = Command::Remove(key.clone());
         self.writer.write(cmd)?;
 
-        self.data.remove(&key);
+        if let Some(_) = self.data.remove(&key) {
+            self.un_compacted += 1;
+            self.compact()?;
+        }
+        Ok(())
+    }
+
+    fn compact(&mut self) -> Result<()> {
+        if self.un_compacted * 10 < self.data.len() {
+            return Ok(())
+        }
+
+        let writer_id = self.writer.id() + 2;
+        let compact_id = self.writer.id() + 1;
+
+        //rotate new writer
+        let writer = Writer::new(&self.dir, writer_id)?;
+        let reader = Reader::new(&self.dir, writer_id)?;
+        self.writer = writer;
+        self.readers.insert(reader.id(), reader);
+
+        //compact
+        let mut compact_writer = Writer::new(&self.dir, compact_id)?;
+        let compact_reader = Reader::new(&self.dir, compact_id)?;
+        self.readers.insert(compact_reader.id(), compact_reader);
+
+        for (_, value) in self.data.iter_mut() {
+            if let Some(reader) = self.readers.get_mut(&value.id()) {
+                if let Some(cmd) = reader.read(value.pos())? {
+                    let new_pos = compact_writer.write(cmd)?;
+                    *value = new_pos;
+                }
+            }
+        }
+
+        let deleted_id_list : Vec<u64> = self.readers.keys()
+            .filter(|&&id| id < compact_id)
+            .map(|&id| id)
+            .collect();
+
+        for id in deleted_id_list {
+            self.readers.remove(&id);
+            log::remove_file(&self.dir, id)?;
+        }
+
+        self.un_compacted = 0;
+
         Ok(())
     }
 }

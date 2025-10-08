@@ -1,12 +1,11 @@
 use crate::Result;
 use crate::cmd::Command;
 use anyhow::anyhow;
-use std::cmp::Ordering;
 use std::collections::HashMap;
+use std::fs;
 use std::fs::{File, OpenOptions, read_dir};
 use std::io::{BufWriter, Read, Seek, SeekFrom, Write};
 use std::path::PathBuf;
-use log::{info, Metadata};
 
 pub struct Position {
     id: u64,
@@ -29,7 +28,7 @@ impl Position {
 
 pub struct Writer {
     id: u64,
-    w: BufWriter<File>,
+    w: File,
     pos: usize,
 }
 
@@ -40,7 +39,7 @@ impl Writer {
 
         Ok(Self {
             id,
-            w: BufWriter::new(file),
+            w: file,
             pos: 0,
         })
     }
@@ -48,9 +47,10 @@ impl Writer {
     pub fn write(&mut self, cmd: Command) -> Result<Position> {
         let pos = self.pos;
         let buf = cmd.to_bytes();
-        self.w.write(&buf.len().to_be_bytes())?;
-        self.w.write(&buf)?;
+        self.w.write_all(&buf.len().to_be_bytes())?;
+        self.w.write_all(&buf)?;
         self.w.flush()?;
+        self.w.sync_all()?;
 
         self.pos += buf.len() + 8;
 
@@ -170,4 +170,10 @@ impl Reader {
 
 fn log_file_path(dir: &PathBuf, id: u64) -> PathBuf {
     dir.join(format!("{}.bin", id))
+}
+
+pub fn remove_file(dir: &PathBuf, id: u64) -> Result<()> {
+    fs::remove_file(log_file_path(dir, id))?;
+    
+    Ok(())
 }
