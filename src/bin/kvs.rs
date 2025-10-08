@@ -1,7 +1,7 @@
 use std::env::current_dir;
 use std::process::exit;
 use clap::{Parser, Subcommand};
-use kvs::KvStore;
+use kvs::{KvStore, KvsEngine};
 use kvs::Result;
 
 #[derive(Parser)]
