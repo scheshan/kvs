@@ -1,10 +1,12 @@
 use crate::Result;
 use crate::cmd::Command;
 use anyhow::anyhow;
+use std::cmp::Ordering;
 use std::collections::HashMap;
-use std::fs::{File, OpenOptions};
+use std::fs::{File, OpenOptions, read_dir};
 use std::io::{BufWriter, Read, Seek, SeekFrom, Write};
 use std::path::PathBuf;
+use log::{info, Metadata};
 
 pub struct Position {
     id: u64,
@@ -14,6 +16,14 @@ pub struct Position {
 impl Position {
     pub fn new(id: u64, pos: usize) -> Self {
         Self { id, pos }
+    }
+
+    pub fn id(&self) -> u64 {
+        self.id
+    }
+
+    pub fn pos(&self) -> usize {
+        self.pos
     }
 }
 
@@ -46,6 +56,10 @@ impl Writer {
 
         let pos = Position::new(self.id, pos);
         Ok(pos)
+    }
+
+    pub fn id(&self) -> u64 {
+        self.id
     }
 }
 
@@ -120,6 +134,37 @@ impl Reader {
         }
 
         Ok(())
+    }
+
+    pub fn load_exists(dir: &PathBuf) -> Result<Vec<Self>> {
+        let mut res = Vec::new();
+
+        let entries = read_dir(&dir)?;
+        for entry in entries {
+            let entry = entry?;
+            let metadata = entry.metadata()?;
+            if !metadata.is_file() || !entry.path().to_str().unwrap().ends_with(".bin") {
+                continue;
+            }
+
+            let id_str = entry
+                .path()
+                .file_stem()
+                .unwrap()
+                .to_str()
+                .unwrap()
+                .to_string();
+            let id: u64 = id_str.parse()?;
+            res.push(Self::new(dir, id)?);
+        }
+
+        res.sort_by(|a, b| a.id.cmp(&b.id));
+
+        Ok(res)
+    }
+
+    pub fn id(&self) -> u64 {
+        self.id
     }
 }
 
