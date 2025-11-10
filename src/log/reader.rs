@@ -3,7 +3,7 @@ use std::io::{Read, Seek, SeekFrom};
 use std::path::PathBuf;
 
 use crate::Result;
-use crate::command::Command;
+use crate::common::Command;
 use crate::log::{LOG_FILE_EXTENSION, LogPosition};
 
 pub struct LogReader {

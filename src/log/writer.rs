@@ -1,5 +1,5 @@
 use crate::Result;
-use crate::command::Command;
+use crate::common::Command;
 use crate::log::{LOG_FILE_EXTENSION, LogPosition};
 use std::fs::{File, OpenOptions};
 use std::io::Write;
